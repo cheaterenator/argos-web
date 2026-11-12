@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Argos – symulator i dekoder</title>
+    <!-- Adres bazowy = folder strony, więc aplikacja działa w dowolnym podfolderze serwera. -->
+    <script>document.write('<base href="' + location.pathname.replace(/[^/]*$/, '') + '" />');</script>
+    <link href="_framework/dotnet.0h2362auat.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-RF2B/QvQWlgg6ZRIyu7MEEg4v7ugq8zlFreqSXbk588=" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <meta name="theme-color" content="#1f3b57" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Argos" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <script type="importmap">{
+  "imports": {
+    "./_framework/blazor.webassembly.js": "./_framework/blazor.webassembly.958z1vx7fr.js",
+    "./_framework/dotnet.js": "./_framework/dotnet.0h2362auat.js",
+    "./_framework/dotnet.native.js": "./_framework/dotnet.native.vzj2a6aakt.js",
+    "./_framework/dotnet.runtime.js": "./_framework/dotnet.runtime.zbexyp8zrs.js"
+  },
+  "scopes": {},
+  "integrity": {
+    "./_framework/blazor.webassembly.958z1vx7fr.js": "sha256-A59Tr9HqEhHMu8kU7kruLI9ayw5MRS6Lvc6z7jCbghk=",
+    "./_framework/blazor.webassembly.js": "sha256-A59Tr9HqEhHMu8kU7kruLI9ayw5MRS6Lvc6z7jCbghk=",
+    "./_framework/dotnet.0h2362auat.js": "sha256-RF2B/QvQWlgg6ZRIyu7MEEg4v7ugq8zlFreqSXbk588=",
+    "./_framework/dotnet.js": "sha256-RF2B/QvQWlgg6ZRIyu7MEEg4v7ugq8zlFreqSXbk588=",
+    "./_framework/dotnet.native.js": "sha256-RezASHv+dbqV50cFnld76YiLhk4B+BjMAKs/euUdNyE=",
+    "./_framework/dotnet.native.vzj2a6aakt.js": "sha256-RezASHv+dbqV50cFnld76YiLhk4B+BjMAKs/euUdNyE=",
+    "./_framework/dotnet.runtime.js": "sha256-MZMguyke9CroSQl+L/SHIGFkPTD+LtYGXkXjAvwWx40=",
+    "./_framework/dotnet.runtime.zbexyp8zrs.js": "sha256-MZMguyke9CroSQl+L/SHIGFkPTD+LtYGXkXjAvwWx40="
+  }
+}</script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="loading">
+            <h1>Argos</h1>
+            <p>Wczytywanie… <span class="loading-progress-text"></span></p>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        Wystąpił nieoczekiwany błąd.
+        <a href="" class="reload">Odśwież stronę</a>
+        <span class="dismiss">🗙</span>
+    </div>
+    <script src="_framework/blazor.webassembly.958z1vx7fr.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+</body>
+
+</html>
