@@ -2,25 +2,44 @@
 
 let ctx = null;          // AudioContext – tworzony po dotknięciu ekranu (wymóg przeglądarek, zwłaszcza Safari)
 let master = null;       // głośność nadawania
+let speakerEq = null;    // korekcja dla głośnika telefonu (wejście łańcucha głośnika)
+let outTarget = null;    // dokąd idzie szyna nadawania: wyjście, korekcja głośnika albo nigdzie (pętla testowa)
 let nextFree = 0;        // koniec ostatniej zaplanowanej transmisji (czas AudioContext)
 const sources = new Set();
-let capture = null;      // { stream, nodes[], worklet }
+let capture = null;      // { stream, source, lp1, nodes[], worklet, audio, dotnet, paused }
+let resumeTimer = null;
 let workletLoaded = false;
 let buzzer = null;
 let wakeLock = null;
 let wantWakeLock = false;
 let loopback = false;    // pętla testowa: nadawanie wraca na wejście, bez głośnika i mikrofonu
+let speaker = false;     // głośnik telefonu: korekcja tonów i wstrzymywanie mikrofonu na czas nadawania
 
 function setSessionType(type) {
     // Safari 16.4+: „playback” nie jest wyciszane przełącznikiem trybu cichego, „play-and-record” przy mikrofonie.
     try { if (navigator.audioSession) navigator.audioSession.type = type; } catch { }
 }
 
+function connectOutput() {
+    const target = loopback ? null : speaker ? speakerEq : ctx.destination;
+    if (target === outTarget) return;
+    if (outTarget) { try { master.disconnect(outTarget); } catch { } }
+    if (target) master.connect(target);
+    outTarget = target;
+}
+
 export async function init() {
     if (!ctx) {
         ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
         master = ctx.createGain();
-        master.connect(ctx.destination);
+        // Głośnik telefonu słabo oddaje niskie tony DTMF (697 Hz o ok. 12 dB ciszej niż 1209–1633 Hz), a dekoder
+        // dopuszcza 10 dB różnicy grup. Filtr szczytowy podnosi 697/770 Hz o 6–8 dB względem grupy wysokiej,
+        // 941 Hz o 3–5 dB; całość ściszona tak, żeby suma tonów się nie obcinała (szczyt < 1).
+        speakerEq = new BiquadFilterNode(ctx, { type: 'peaking', frequency: 700, Q: 1.2, gain: 10 });
+        const headroom = ctx.createGain();
+        headroom.gain.value = 0.57;
+        speakerEq.connect(headroom).connect(ctx.destination);
+        connectOutput();
         setSessionType('playback');
     }
     if (ctx.state !== 'running') await ctx.resume();
@@ -51,10 +70,18 @@ export async function setOutput(id) {
 
 // Pętla testowa: szyna nadawania nie idzie na wyjście audio, tylko (przez te same filtry) na wejście dekodera.
 export function setLoopback(on) {
-    if (!ctx || loopback === on) return;
+    if (!ctx) return;
     loopback = on;
-    if (on) master.disconnect(ctx.destination);
-    else master.connect(ctx.destination);
+    connectOutput();
+}
+
+// Głośnik telefonu (test bez przejściówki): korekcja tonów, a mikrofon jest wyłączany na czas nadawania – przy
+// włączonym mikrofonie iPhone kieruje dźwięk strony do słuchawki rozmów. Jak w radiu: nadając, nie odbiera.
+export function setSpeaker(on) {
+    if (!ctx) return;
+    speaker = on;
+    connectOutput();
+    if (!on && capture && capture.paused) resumeInput();
 }
 
 export function setLevel(value) {
@@ -73,10 +100,19 @@ export function play(bytes, rate, delayMs) {
     src.connect(master);
     let start = ctx.currentTime + Math.max(0.03, delayMs / 1000);
     start = Math.max(start, nextFree);
+    const halfDuplex = speaker && !loopback && capture && (capture.stream || capture.paused);
+    if (halfDuplex && !capture.paused) {
+        pauseInput();
+        start = Math.max(start, ctx.currentTime + 0.4); // chwila na przełączenie toru na głośnik
+    }
     nextFree = start + buffer.duration;
     sources.add(src);
     src.onended = () => sources.delete(src);
     src.start(start);
+    if (halfDuplex) {
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(resumeInput, (nextFree - ctx.currentTime) * 1000 + 300);
+    }
     return [start - ctx.currentTime, buffer.duration];
 }
 
@@ -84,16 +120,18 @@ export function stopAll() {
     for (const s of sources) { try { s.stop(); } catch { } }
     sources.clear();
     nextFree = 0;
+    if (capture && capture.paused) {
+        clearTimeout(resumeTimer);
+        resumeInput();
+    }
 }
 
 export async function startInput(dotnet, deviceId, targetRate) {
     stopInput();
-    let stream = null, source;
-    if (loopback) {
-        source = master;
-    } else {
-        const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 };
-        if (deviceId) audio.deviceId = { exact: deviceId };
+    const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 };
+    if (deviceId) audio.deviceId = { exact: deviceId };
+    let stream = null;
+    if (!loopback) {
         setSessionType('play-and-record');
         stream = await navigator.mediaDevices.getUserMedia({ audio });
     }
@@ -101,7 +139,7 @@ export async function startInput(dotnet, deviceId, targetRate) {
         await ctx.audioWorklet.addModule('js/capture-worklet.js');
         workletLoaded = true;
     }
-    if (stream) source = ctx.createMediaStreamSource(stream);
+    const source = stream ? ctx.createMediaStreamSource(stream) : master;
     // Filtr antyaliasingowy przed przepróbkowaniem (2 × Butterworth 2. rzędu).
     const lp1 = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: targetRate * 0.42, Q: 0.707 });
     const lp2 = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: targetRate * 0.42, Q: 0.707 });
@@ -110,19 +148,48 @@ export async function startInput(dotnet, deviceId, targetRate) {
     mute.gain.value = 0;
     worklet.port.onmessage = e => dotnet.invokeMethodAsync('OnAudio', e.data.pcm, e.data.peak);
     source.connect(lp1).connect(lp2).connect(worklet).connect(mute).connect(ctx.destination);
-    capture = { stream, nodes: loopback ? [lp1, lp2, worklet, mute] : [source, lp1, lp2, worklet, mute], worklet };
-    if (loopback) return 'pętla testowa (nadawanie tej strony)';
+    capture = { stream, source, lp1, nodes: [lp1, lp2, worklet, mute], worklet, audio, dotnet, paused: false };
+    if (!stream) return 'pętla testowa (nadawanie tej strony)';
     const track = stream.getAudioTracks()[0];
     return track ? track.label : '';
 }
 
+// Mikrofon wyłączony na czas nadawania przez głośnik; dekoder dostaje w tym czasie ciszę.
+function pauseInput() {
+    if (!capture || !capture.stream) return;
+    try { capture.source.disconnect(); } catch { }
+    for (const t of capture.stream.getTracks()) t.stop();
+    capture.stream = null;
+    capture.source = null;
+    capture.paused = true;
+    setSessionType('playback');
+}
+
+async function resumeInput() {
+    const c = capture;
+    if (!c || !c.paused) return;
+    try {
+        setSessionType('play-and-record');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: c.audio });
+        if (capture !== c || !c.paused) { for (const t of stream.getTracks()) t.stop(); return; }
+        c.stream = stream;
+        c.source = ctx.createMediaStreamSource(stream);
+        c.source.connect(c.lp1);
+        c.paused = false;
+    } catch (e) {
+        c.dotnet.invokeMethodAsync('OnInputError', 'nie udało się wznowić mikrofonu po nadawaniu: ' + (e && e.message ? e.message : e));
+    }
+}
+
 export function stopInput() {
+    clearTimeout(resumeTimer);
     if (!capture) return;
     capture.worklet.port.postMessage('stop');
     capture.worklet.port.onmessage = null;
     for (const n of capture.nodes) { try { n.disconnect(); } catch { } }
+    if (capture.source && capture.source !== master) { try { capture.source.disconnect(); } catch { } }
+    if (capture.source === master) { try { master.disconnect(capture.lp1); } catch { } }
     if (capture.stream) for (const t of capture.stream.getTracks()) t.stop();
-    else { try { master.disconnect(capture.nodes[0]); } catch { } }
     capture = null;
     setSessionType('playback');
 }

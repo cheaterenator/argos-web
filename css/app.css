@@ -114,6 +114,8 @@ input[type=range] { width: 100%; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
 .field > span { font-weight: 600; font-size: .9rem; }
 .field small { color: var(--muted); }
+fieldset.choice { border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; margin: 10px 0; }
+fieldset.choice legend { font-weight: 600; font-size: .9rem; padding: 0 4px; }
 .check { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
 .check input { min-height: auto; width: 20px; height: 20px; }
 

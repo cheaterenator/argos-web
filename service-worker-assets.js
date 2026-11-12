@@ -1,9 +1,9 @@
 self.assetsManifest = {
-  "version": "gNBY7B+w",
+  "version": "GsXxjHDp",
   "assets": [
     {
-      "hash": "sha256-GF/Bg7QZfHvaYESc7PXVUwbP1EDzuc6YWt5IvZs0uSQ=",
-      "url": "_framework/ArgosWeb.sr86bhuyn3.wasm"
+      "hash": "sha256-Pv8rSjLrz4K86pMEHFRxBUzPZ2VaKADt35drGZZTFqc=",
+      "url": "_framework/ArgosWeb.24flpq2xnd.wasm"
     },
     {
       "hash": "sha256-8+eRe6sAjEu/M8Qei4AasoVR7WCogh871t1DgR5r6KY=",
@@ -190,8 +190,8 @@ self.assetsManifest = {
       "url": "_framework/blazor.webassembly.958z1vx7fr.js"
     },
     {
-      "hash": "sha256-RF2B/QvQWlgg6ZRIyu7MEEg4v7ugq8zlFreqSXbk588=",
-      "url": "_framework/dotnet.0h2362auat.js"
+      "hash": "sha256-h11uyRvyii2Vd5llGdxATZBUrwRvUf29LxHq7JSIdZE=",
+      "url": "_framework/dotnet.dzc3a1d244.js"
     },
     {
       "hash": "sha256-hYigRhIZKHyCXxXWqL/yR3ZWzZhV2oSi+2N3/UPeoxk=",
@@ -210,7 +210,7 @@ self.assetsManifest = {
       "url": "_framework/icudt.oh1zvcfom8.dat"
     },
     {
-      "hash": "sha256-R/TgAIJBZ3YwPap1gs4wYvN1ADi84oolWPIBgs0z54A=",
+      "hash": "sha256-qSRphctpDCX9Y4Q3ML/N2cYuewxJos1nP3/mISsHOhY=",
       "url": "css/app.css"
     },
     {
@@ -226,11 +226,11 @@ self.assetsManifest = {
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-LljK+BBmbv88/YnSMKrhkWZH30uboN3qEzl3RDtPxW4=",
+      "hash": "sha256-FcG1+TD8aCSKmFQv+j5FuHQirmlB05YDO4yB3RI0Zqo=",
       "url": "index.html"
     },
     {
-      "hash": "sha256-enQQuGHp9Aog/VQvraxlAiGQ/WN/XIwTQ+WwG7fhwrE=",
+      "hash": "sha256-xwo46ypeiYutc15qr2oiq3bommHaRLNqlC8wi01xdv0=",
       "url": "js/argos-audio.js"
     },
     {
